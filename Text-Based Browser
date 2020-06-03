@@ -1,0 +1,80 @@
+import os.path
+import sys
+import requests
+from colorama import Fore, Style
+from bs4 import BeautifulSoup
+from collections import deque
+from os import path
+
+args = sys.argv
+tags = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a', 'ul', 'ol', 'li']
+
+if len(args) > 1:
+    direct = args[1]
+    if not os.path.exists(direct):
+        os.mkdir(direct)
+
+if len(args) == 1:
+    direct = 'tb_tabs'
+    if not os.path.exists(direct):
+        os.mkdir(direct)
+
+
+def get_text_from(tag):
+    if tag.name == 'a':
+        return Fore.BLUE + tag.get_text() + Style.RESET_ALL
+    return tag.get_text()
+
+
+def get_url(address):
+    re = requests.get(address)
+    if re:
+        return re.text
+    else:
+        print('failed')
+
+
+def make_file(file_name, text):
+    global direct
+    new_name = ''
+    if '.com' in file_name:
+        new_name = file_name.strip('.com')
+    elif '.org' in file_name:
+        new_name = file_name.strip('.org')
+    with open(direct + '/' + new_name + '.txt', 'w') as f:
+        f.write(text)
+
+
+while True:
+    n = input()
+    if n == 'exit':
+        break
+
+    hts = 'https://'
+    com = '.com'
+    org = '.org'
+    url = deque()
+
+    if '.' in n:
+        if hts not in n:
+            if com not in n and org not in n:
+                url.appendleft(hts + n + com)
+            else:
+                url.appendleft(hts + n)
+        else:
+            url.appendleft(n)
+    else:
+        if path.exists('tb_tabs/' + n + '.txt'):
+            with open('tb_tabs/' + n + '.txt', 'r') as file:
+                for line in file:
+                    print(line.rstrip())
+
+    if len(url) > 0:
+        r = requests.get(url[0])
+        soup = BeautifulSoup(r.content, 'html.parser')
+        tags_with_text = soup.find_all(tags)
+        text_html = ''.join(map(get_text_from, tags_with_text))
+        html = get_url(url[0])
+        make_file(n, text_html)
+
+        print(text_html)
